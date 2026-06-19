@@ -9,7 +9,7 @@ pygame.mixer.init()
 
 # Background Music
 pygame.mixer.music.load("assets/sounds/background.mp3")
-pygame.mixer.music.set_volume(0.7)
+pygame.mixer.music.set_volume(3)
 pygame.mixer.music.play(-1)
 
 click_sound = pygame.mixer.Sound("assets/sounds/select click.wav")
@@ -37,9 +37,10 @@ YELLOW = (255, 215, 0)
 ORANGE = (255, 140, 0)
 
 # Fonts
-FONT_TITLE = pygame.font.SysFont("Arial", 40, bold=True)
-FONT_SUB = pygame.font.SysFont("Arial", 24, bold=True)
-FONT_BODY = pygame.font.SysFont("Arial", 20)
+FONT_TITLE = pygame.font.SysFont("Verdana", 32, bold=True)
+FONT_SUB = pygame.font.SysFont("Verdana", 22, bold=True)
+FONT_BODY = pygame.font.SysFont("Verdana", 18)
+
 
 #TRANSLATION DICTIONARY 
 TEXTS = {
@@ -129,8 +130,8 @@ class Boat:
         self.side = "LEFT"
         self.passengers = []
         
-        self.width = 220   
-        self.height = 100   
+        self.width = 250 
+        self.height =  140
         self.x = 240
         self.y = 410       
         self.target_x = 240
@@ -210,7 +211,7 @@ class GameManager:
                 Entity(3, "Monkey", GRAY, "assets/images/monkey.png"),
                 Entity(4, "Banana", YELLOW, "assets/images/banana.png")
             ]
-        else:
+        elif self.current_level ==2:
             self.time_left = 120
             self.entities = [
                 Entity(1, "Explorer", YELLOW, "assets/images/explorer.png"),
@@ -219,6 +220,16 @@ class GameManager:
                 Entity(4, "Banana", YELLOW, "assets/images/banana.png"),
                 Entity(5, "Treasure", RED, "assets/images/treasure.png")
 ]
+        else:  
+            self.time_left = 150
+            self.entities = [
+                Entity(1, "Explorer", YELLOW, "assets/images/explorer.png"),
+                Entity(2, "Tiger", ORANGE, "assets/images/tiger.png"),
+                Entity(3, "Monkey", GRAY, "assets/images/monkey.png"),
+                Entity(4, "Banana", YELLOW, "assets/images/banana.png"),
+                Entity(5, "Treasure", RED, "assets/images/treasure.png"),
+                Entity(6, "Elephant", GREEN, "assets/images/elephant.png")
+            ]
         if not pygame.mixer.music.get_busy():
          pygame.mixer.music.play(-1)
 
@@ -279,6 +290,8 @@ class GameManager:
                 lose_sound.play()
                 self.reason_fail = "Monkey ate Banana!" if self.lang == "EN" else "Monyet makan Pisang!"
                 return
+            
+           
                
 
         if "Explorer" not in right_side and not (self.boat.side == "RIGHT" and "Explorer" in boat_side):
@@ -295,9 +308,8 @@ class GameManager:
                 self.reason_fail = "Monkey ate Banana!" if self.lang == "EN" else "Monyet makan Pisang!"
                 return
 
-                self.state = "GAMEOVER"
-                self.reason_fail = "Snake ate Bird!" if self.lang == "EN" else "Ular makan Burung!"
-                return
+            
+            
 
         all_landed_right = True
         for e in self.entities:
@@ -323,7 +335,15 @@ class GameManager:
 
     def draw_game(self, surface):
         if self.background_image:
-            surface.blit(self.background_image, (0, 0))
+         bg = self.background_image.copy()
+
+         bg.set_alpha(120)
+         surface.blit(bg, (0,0))
+
+         soft_layer = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+         soft_layer.fill((255, 255, 255, 40))
+         surface.blit(soft_layer, (0,0))
+
         else:
             surface.fill(GREEN)
             pygame.draw.rect(surface, BLUE, (250, 0, 500, SCREEN_HEIGHT))
@@ -335,34 +355,50 @@ class GameManager:
         for e in self.entities:
             if e.side == "LEFT":
                 ex = 50 + (left_idx % 2) * 80
-                ey = 150 + (left_idx // 2) * 90
+                ey = 220 + (left_idx // 2) * 110
                 e.draw(surface, ex, ey)
                 left_idx += 1
             elif e.side == "RIGHT":
                 ex = 800 + (right_idx % 2) * 80
-                ey = 150 + (right_idx // 2) * 90
+                ey = 250 + (right_idx // 2) * 110
                 e.draw(surface, ex, ey)
                 right_idx += 1
             elif e.side == "BOAT":
                 b_idx = self.boat.passengers.index(e)
                 # --- LARASAN KETINGGIAN IDEAL DI SINI ---
-                ex = self.boat.x + 35 + (b_idx * 80)
-                ey = self.boat.y - 10  # Ditukar dari +15 ke -10 supaya naik atas papan dengan tepat
+                spacing = 75  # jarak antara entity atas bot
+
+                total_width = (len(self.boat.passengers) - 1) * spacing
+                start_x = self.boat.x + (self.boat.width // 2) - (total_width // 2)
+
+                ex = start_x + (b_idx * spacing)
+                ey = self.boat.y + 5   # lebih natural duduk atas bot
                 e.draw(surface, ex, ey)
 
         t = TEXTS[self.lang]
-        lbl_lvl = FONT_SUB.render(f"{t['level']} {self.current_level}", True, WHITE)
-        lbl_scr = FONT_SUB.render(f"{t['score']} {self.score}", True, WHITE)
-        lbl_tim = FONT_SUB.render(f"{t['time']} {int(self.time_left)}s", True, RED if self.time_left < 20 else WHITE)
+        lbl_lvl = FONT_SUB.render(f"{t['level']} {self.current_level}", True, BLACK)
+        lbl_scr = FONT_SUB.render(f"{t['score']} {self.score}", True, BLACK)
+        lbl_tim = FONT_SUB.render(f"{t['time']} {int(self.time_left)}s", True, RED if self.time_left < 20 else BLACK)
         lbl_ctrl = FONT_BODY.render(t["controls"], True, BLACK)
+        lbl_move = FONT_SUB.render(f"Moves: {self.moves_count}", True, BLACK)
+        max_time = 120 if self.current_level < 3 else 150
 
+        pygame.draw.rect(surface, (200,200,200),
+                (SCREEN_WIDTH-220, 60, 200, 20))
+
+        remaining = int((self.time_left / max_time) * 200)
+
+        pygame.draw.rect(surface, (0,255,0),
+                (SCREEN_WIDTH-220, 60, remaining, 20))   
         surface.blit(lbl_lvl, (30, 20))
         surface.blit(lbl_scr, (30, 55))
-        surface.blit(lbl_tim, (430, 20))
+        surface.blit(lbl_tim, (SCREEN_WIDTH - lbl_tim.get_width() - 20, 20))
+
+        surface.blit(lbl_move, (30, 90))
         pygame.draw.rect(
         surface,
-        (220, 220, 220),
-        (0, SCREEN_HEIGHT - 40, SCREEN_WIDTH, 40),
+        (255, 255, 255),
+        (0, SCREEN_HEIGHT - 50, SCREEN_WIDTH, 50),
         border_radius=10
 )
 
@@ -371,9 +407,14 @@ class GameManager:
         "1-Explorer | 2-Tiger | 3-Monkey | 4-Banana | "
         "SPACE-Move | P-Pause | R-Restart"
     )
-        else:
+        elif self.current_level ==2:
             control_text = (
         "1-Explorer | 2-Tiger | 3-Monkey | 4-Banana | 5-Treasure | "
+        "SPACE-Move | P-Pause | R-Restart"
+    )
+        else:
+         control_text = (
+        "1-Explorer | 2-Tiger | 3-Monkey | 4-Banana | 5-Treasure | 6-Elephant | "
         "SPACE-Move | P-Pause | R-Restart"
     )
 
@@ -381,15 +422,16 @@ class GameManager:
 
 
 
-        ctrl_rect = lbl_ctrl.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 20))
+        ctrl_rect = lbl_ctrl.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 25))
         surface.blit(lbl_ctrl, ctrl_rect)
         if self.state == "PAUSED":
             self.draw_multi_line_overlay(surface, [t["paused"], t["paused_sub"]])
         elif self.state == "GAMEOVER":
             self.draw_multi_line_overlay(surface, [t["game_over"], self.reason_fail, "Press R to Restart"])
         elif self.state == "WIN_STAGE":
-            if self.current_level == 1:
-                self.draw_multi_line_overlay(surface, [t["win"], f"{t['win_sub']} 1!", t["next_lvl"]])
+            if self.current_level < 3:
+                self.draw_multi_line_overlay(
+                    surface, [t["win"], f"{t['win_sub']} {self.current_level} !", t["next_lvl"]])
             else:
                 self.draw_multi_line_overlay(surface, ["ALL LEVELS CLEARED!", f"Final Score: {self.score}", "Press ENTER to return to Menu"])
 
@@ -501,6 +543,7 @@ def main():
                     elif event.key == pygame.K_3: manager.handle_load(3)
                     elif event.key == pygame.K_4: manager.handle_load(4)
                     elif event.key == pygame.K_5: manager.handle_load(5)
+                    elif event.key == pygame.K_6: manager.handle_load(6)
 
                 elif manager.state == "PAUSED":
                     if event.key == pygame.K_p:
@@ -519,6 +562,12 @@ def main():
                             manager.current_level = 2
                             manager.init_level()
                             manager.state = "PLAYING"
+
+                        elif manager.current_level ==2:
+                            manager.current_level = 3
+                            manager.init_level()
+                            manager.state = "PLAYING"
+                        
                         else:
                             manager.current_level = 1
                             manager.score = 0
